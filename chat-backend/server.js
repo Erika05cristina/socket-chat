@@ -4,12 +4,11 @@ const crypto = require('crypto');
 // Configuración para cifrado y HMAC
 const ALGORITHM = 'aes-256-cbc';
 const ENCRYPTION_KEY = '12345678901234567890123456789012'; // 32 bytes
-const IV = Buffer.from('1234567890123456'); // 16 bytes (requerido para CBC)
+const IV = Buffer.from('1234567890123456'); // 16 bytes
+const HMAC_SECRET = 'your_hmac_secret_key';
 
-const HMAC_SECRET = 'your_hmac_secret_key'; // Clave secreta para HMAC
-
-// Lista de sockets conectados
-const clients = [];
+// Persistencia de clientes
+const clients = new Map(); // Almacena clientes por ID único
 
 // Función para descifrar mensajes
 function decryptMessage(encryptedMessage) {
@@ -19,69 +18,58 @@ function decryptMessage(encryptedMessage) {
     return decrypted;
 }
 
-// Función para generar HMAC
-function generateHMAC(message) {
-    return crypto.createHmac('sha256', HMAC_SECRET).update(message).digest('hex');
+// Función para verificar HMAC
+function verifyHMAC(message, hmac) {
+    const calculatedHMAC = crypto.createHmac('sha256', HMAC_SECRET).update(message).digest('hex');
+    return hmac === calculatedHMAC;
 }
 
-// Crear el servidor TCP
+// Manejo de conexiones de clientes
 const server = net.createServer((socket) => {
-    console.log('Cliente conectado:', socket.remoteAddress);
-    clients.push(socket); // Agregar cliente a la lista
+    console.log(`Cliente conectado: ${socket.remoteAddress}:${socket.remotePort}`);
 
     socket.on('data', (data) => {
         try {
-            // Descifrar mensaje recibido
-            const decryptedData = decryptMessage(data.toString());
-            console.log('Mensaje descifrado:', decryptedData);
+            const [encryptedMessage] = data.toString().split('|');
+            const decryptedData = decryptMessage(encryptedMessage).split('|');
+            const [message, hmac, clientId] = decryptedData;
 
-            // Separar mensaje y HMAC
-            const [message, clientHMAC] = decryptedData.split('|');
-            if (!message || !clientHMAC) {
-                console.error('Formato de mensaje inválido.');
+            // Validar HMAC
+            if (!verifyHMAC(message, hmac)) {
+                console.log('Error: Integridad del mensaje comprometida.');
                 return;
             }
 
-            // Generar HMAC en el servidor para verificar integridad
-            const serverHMAC = generateHMAC(message);
-            if (serverHMAC !== clientHMAC) {
-                console.error('Error: Integridad del mensaje comprometida.');
-                return;
+            // Registrar o actualizar cliente
+            if (!clients.has(clientId)) {
+                clients.set(clientId, { socket, name: message });
+                console.log(`Nuevo cliente registrado: ${message} (ID: ${clientId})`);
+            } else {
+                clients.get(clientId).socket = socket; // Actualizar socket
+                console.log(`Cliente reconectado: ${clients.get(clientId).name}`);
             }
 
-            console.log('Mensaje recibido y validado:', message);
-
-            // Difundir el mensaje validado a todos los clientes
-            broadcastMessage(socket, message);
-
-        } catch (error) {
-            console.error('Error al procesar el mensaje:', error.message);
+            // Difundir mensaje a otros clientes
+            clients.forEach((client, id) => {
+                if (id !== clientId) {
+                    client.socket.write(`Mensaje de ${clients.get(clientId).name}: ${message}`);
+                }
+            });
+        } catch (err) {
+            console.error('Error al procesar el mensaje:', err.message);
         }
     });
 
-    socket.on('end', () => {
-        console.log('Cliente desconectado:', socket.remoteAddress);
-        // Eliminar cliente de la lista
-        const index = clients.indexOf(socket);
-        if (index !== -1) clients.splice(index, 1);
+    socket.on('close', () => {
+        console.log(`Cliente desconectado: ${socket.remoteAddress}:${socket.remotePort}`);
+        // No eliminamos del mapa para mantener persistencia
     });
 
     socket.on('error', (err) => {
-        console.error('Error en el socket:', err.message);
+        console.error('Error en el cliente:', err.message);
     });
 });
 
-// Difundir mensajes a otros clientes
-function broadcastMessage(senderSocket, message) {
-    clients.forEach((socket) => {
-        if (socket !== senderSocket) {
-            socket.write(message);
-        }
-    });
-}
-
-// Iniciar el servidor
-const PORT = 3000;
-server.listen(PORT, () => {
-    console.log(`Servidor TCP escuchando en el puerto ${PORT}`);
+server.listen(3000, () => {
+    console.log('Servidor TCP escuchando en el puerto 3000');
 });
