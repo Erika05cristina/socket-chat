@@ -2,7 +2,7 @@ const net = require('net');
 const crypto = require('crypto');
 
 // Configuración de cifrado y HMAC
-const HMAC_SECRET = 'your_hmac_secret_key'; // Clave secreta para HMAC
+const HMAC_SECRET = 'erika_jorge'; // Clave secreta para HMAC
 const ENCRYPTION_KEY = '12345678901234567890123456789012'; // 32 bytes (igual que el servidor)
 const IV = '1234567890123456'; // 16 bytes (igual que el servidor)
 

@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const ALGORITHM = 'aes-256-cbc';
 const ENCRYPTION_KEY = '12345678901234567890123456789012'; // 32 bytes
 const IV = Buffer.from('1234567890123456'); // 16 bytes
-const HMAC_SECRET = 'your_hmac_secret_key';
+const HMAC_SECRET = 'erika_jorge';
 
 // Persistencia de clientes
 const clients = new Map(); // Almacena clientes por ID único
@@ -27,6 +27,7 @@ function verifyHMAC(message, hmac) {
 // Manejo de conexiones de clientes
 const server = net.createServer((socket) => {
     let clientId = null;  // ID único del cliente
+    let clientName = null; // Nombre del cliente
 
     console.log(`Cliente conectado: ${socket.remoteAddress}:${socket.remotePort}`);
 
@@ -49,17 +50,31 @@ const server = net.createServer((socket) => {
 
             // Registrar o actualizar cliente
             if (!clients.has(clientId)) {
-                clients.set(clientId, { socket, name: message });
-                console.log(`Nuevo cliente registrado: ${message} (ID: ${clientId})`);
+                // El primer mensaje recibido es el nombre de usuario, lo usamos para registrar al cliente
+                clientName = message;
+                clients.set(clientId, { socket, name: clientName });
+                console.log(`Nuevo cliente registrado: ${clientName} (ID: ${clientId})`);
+                
+                // Notificar a los demás clientes que un nuevo usuario se ha conectado
+                clients.forEach((client, id) => {
+                    if (id !== clientId) {
+                        client.socket.write(`Usuario conectado: ${clientName}\n`);
+                    }
+                });
+
             } else {
-                clients.get(clientId).socket = socket; // Actualizar socket
+                // Si el cliente ya está registrado, actualizar su socket
+                clients.get(clientId).socket = socket;
                 console.log(`Cliente reconectado: ${clients.get(clientId).name}`);
             }
+
+            // Si el mensaje es "name", lo ignoramos (esto es el nombre registrado)
+            if (message === clientName) return;
 
             // Difundir mensaje a otros clientes
             clients.forEach((client, id) => {
                 if (id !== clientId) {
-                    client.socket.write(`Mensaje de ${clients.get(clientId).name}: ${message}\n`);
+                    client.socket.write(`Mensaje de ${clientName}: ${message}\n`);
                 }
             });
         } catch (err) {
@@ -68,11 +83,16 @@ const server = net.createServer((socket) => {
     });
 
     socket.on('close', () => {
-        console.log(`Cliente desconectado: ${socket.remoteAddress}:${socket.remotePort}`);
-        // Eliminar cliente del mapa solo si ya no está conectado
+        // Cuando un cliente se desconecta, enviar un mensaje de desconexión a los demás clientes
         if (clientId && clients.has(clientId)) {
+            console.log(`Cliente desconectado: ${clientId}`);
             clients.delete(clientId);
-            console.log(`Cliente ${clientId} eliminado.`);
+            // Enviar el mensaje a los demás clientes de que este usuario se desconectó
+            clients.forEach((client, id) => {
+                if (id !== clientId) {
+                    client.socket.write(`Usuario desconectado: ${clientName}\n`);
+                }
+            });
         }
     });
 
