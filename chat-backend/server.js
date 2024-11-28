@@ -26,18 +26,25 @@ function verifyHMAC(message, hmac) {
 
 // Manejo de conexiones de clientes
 const server = net.createServer((socket) => {
+    let clientId = null;  // ID único del cliente
+
     console.log(`Cliente conectado: ${socket.remoteAddress}:${socket.remotePort}`);
 
     socket.on('data', (data) => {
         try {
             const [encryptedMessage] = data.toString().split('|');
             const decryptedData = decryptMessage(encryptedMessage).split('|');
-            const [message, hmac, clientId] = decryptedData;
+            const [message, hmac] = decryptedData;
 
-            // Validar HMAC
+            // Verificar HMAC
             if (!verifyHMAC(message, hmac)) {
                 console.log('Error: Integridad del mensaje comprometida.');
                 return;
+            }
+
+            // Asignar ID único a un nuevo cliente
+            if (!clientId) {
+                clientId = `${socket.remoteAddress}:${socket.remotePort}`;
             }
 
             // Registrar o actualizar cliente
@@ -52,7 +59,7 @@ const server = net.createServer((socket) => {
             // Difundir mensaje a otros clientes
             clients.forEach((client, id) => {
                 if (id !== clientId) {
-                    client.socket.write(`Mensaje de ${clients.get(clientId).name}: ${message}`);
+                    client.socket.write(`Mensaje de ${clients.get(clientId).name}: ${message}\n`);
                 }
             });
         } catch (err) {
@@ -62,7 +69,11 @@ const server = net.createServer((socket) => {
 
     socket.on('close', () => {
         console.log(`Cliente desconectado: ${socket.remoteAddress}:${socket.remotePort}`);
-        // No eliminamos del mapa para mantener persistencia
+        // Eliminar cliente del mapa solo si ya no está conectado
+        if (clientId && clients.has(clientId)) {
+            clients.delete(clientId);
+            console.log(`Cliente ${clientId} eliminado.`);
+        }
     });
 
     socket.on('error', (err) => {
