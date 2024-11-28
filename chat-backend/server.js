@@ -74,7 +74,7 @@ const server = net.createServer((socket) => {
             // Difundir mensaje a otros clientes
             clients.forEach((client, id) => {
                 if (id !== clientId) {
-                    client.socket.write(`Mensaje de ${clientName}: ${message}\n`);
+                    client.socket.write(`${clientName}: ${message}\n`);
                 }
             });
         } catch (err) {

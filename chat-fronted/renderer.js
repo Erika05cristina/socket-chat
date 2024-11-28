@@ -3,34 +3,57 @@ const crypto = require('crypto');
 
 // Configuración de cifrado y HMAC
 const HMAC_SECRET = 'erika_jorge'; // Clave secreta para HMAC
-const ENCRYPTION_KEY = '12345678901234567890123456789012'; // 32 bytes (igual que el servidor)
-const IV = '1234567890123456'; // 16 bytes (igual que el servidor)
-
-// Configuración inicial
-const client = new net.Socket();
+const ENCRYPTION_KEY = '12345678901234567890123456789012'; // 32 bytes
+const IV = '1234567890123456'; // 16 bytes
 const HOST = '127.0.0.1';
 const PORT = 3000;
-let clientId = ''; // Se establecerá cuando el usuario ingrese su nombre
-let username = ''; // Nombre de usuario que se enviará al servidor
+
+let client = null; // Socket del cliente
+let clientId = ''; // ID único del cliente
+let username = ''; // Nombre del usuario
+let reconnectInterval = 5000; // Intervalo de reconexión en ms
 
 // Conectar al servidor
 function connectToServer() {
+    client = new net.Socket();
+
     client.connect(PORT, HOST, () => {
         console.log('Conectado al servidor.');
-        // Enviar el nombre del usuario al servidor como primer mensaje
+        appendMessage('Conectado al servidor.');
+
+        // Enviar el nombre de usuario al servidor como primer mensaje
         client.write(encryptMessage(username, clientId));
     });
 
-    // Manejar mensajes del servidor (de otros clientes)
     client.on('data', (data) => {
         const message = data.toString();
-        appendMessage(message); // Mostrar mensaje en la interfaz de usuario
+        appendMessage(message); // Mostrar mensaje en la interfaz
     });
 
-    // Manejar errores
     client.on('error', (err) => {
-        console.error('Error en el cliente:', err.message);
+        if (err.code === 'ECONNREFUSED') {
+            // Error suprimido para evitar el mensaje en consola
+            console.log('Servidor no disponible. Intentando reconectar...');
+            appendMessage('Servidor no disponible. Intentando reconectar...');
+        } else {
+            console.error('Error en el cliente:', err.message);
+            appendMessage(`Error: ${err.message}`);
+        }
     });
+
+    client.on('close', () => {
+        console.log('Conexión con el servidor cerrada.');
+        appendMessage('Servidor desconectado. Intentando reconectar...');
+        attemptReconnect(); // Intentar reconectar automáticamente
+    });
+}
+
+// Intentar reconexión automática
+function attemptReconnect() {
+    setTimeout(() => {
+        console.log('Intentando reconectar al servidor...');
+        connectToServer();
+    }, reconnectInterval);
 }
 
 // Enviar mensaje al servidor
