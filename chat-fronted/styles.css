@@ -9,6 +9,49 @@ body {
     background-color: #f0f0f0;
 }
 
+.hidden {
+    display: none;
+}
+
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 400px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.login-container h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.login-container input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.login-container button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.login-container button:hover {
+    background-color: #0056b3;
+}
+
 .chat-container {
     width: 400px;
     height: 600px;
@@ -25,14 +68,11 @@ body {
     padding: 10px;
     overflow-y: auto;
     border-bottom: 1px solid #ddd;
-    display: flex;
-    flex-direction: column-reverse;  /* Cambia la dirección de los mensajes */
 }
 
 .input-container {
     display: flex;
     padding: 10px;
-    border-top: 1px solid #ddd;
 }
 
 #message {
