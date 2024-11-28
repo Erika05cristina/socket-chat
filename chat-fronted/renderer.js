@@ -1,4 +1,4 @@
-const net = require('net');
+const net = require('net'); // Usamos el módulo net directamente
 
 const HOST = '127.0.0.1';
 const PORT = 3000;
@@ -14,7 +14,6 @@ client.on('data', (data) => {
     appendMessage(`Servidor: ${data.toString()}`);
 });
 
-// Manejar mensajes enviados por el usuario
 const sendButton = document.getElementById('send');
 const messageInput = document.getElementById('message');
 const messagesDiv = document.getElementById('messages');
@@ -22,8 +21,11 @@ const messagesDiv = document.getElementById('messages');
 sendButton.addEventListener('click', () => {
     const message = messageInput.value.trim();
     if (message) {
+        // Enviar el mensaje al servidor
         client.write(message);
+        // Mostrar el mensaje en la interfaz
         appendMessage(`Tú: ${message}`);
+        // Limpiar el campo de entrada
         messageInput.value = '';
     }
 });

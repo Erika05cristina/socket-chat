@@ -9,8 +9,8 @@ app.on('ready', () => {
         width: 800,
         height: 600,
         webPreferences: {
-            preload: path.join(__dirname, 'renderer.js'), // Precargar lógica
-            nodeIntegration: true, // Habilitar Node.js
+            nodeIntegration: true, // Habilitar nodeIntegration
+            contextIsolation: false, // Deshabilitar contextIsolation
         },
     });
 
