@@ -25,11 +25,14 @@ body {
     padding: 10px;
     overflow-y: auto;
     border-bottom: 1px solid #ddd;
+    display: flex;
+    flex-direction: column-reverse;  /* Cambia la dirección de los mensajes */
 }
 
 .input-container {
     display: flex;
     padding: 10px;
+    border-top: 1px solid #ddd;
 }
 
 #message {
